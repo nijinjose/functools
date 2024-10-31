@@ -1,109 +1,177 @@
-# Cell 1: Import Libraries
+# Cell 1: Import Libraries and Set Display Options
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-import seaborn as sns
 from scipy import stats
 
-# Set default plot style and size
-plt.style.use('seaborn')
-plt.rcParams['figure.figsize'] = (10, 6)
-
-# Set display options for pandas
-pd.set_option('display.max_columns', None)
-pd.set_option('display.max_rows', 100)
+# Configure pandas display options for large datasets
+pd.set_option('display.max_columns', 20)
+pd.set_option('display.max_rows', 60)
 pd.set_option('display.float_format', lambda x: '%.3f' % x)
 
-# Cell 2: Load Data
-# Replace 'your_file.csv' with your actual data file
+# Set plot style and size
+plt.style.use('classic')
+plt.rcParams['figure.figsize'] = (12, 8)
+
+# Cell 2: Load Data and Create Sample
+# Load your data
 # df = pd.read_csv('your_file.csv')
 
-# Cell 3: Basic Data Overview
-# Display basic information about the dataset
-print("Dataset Shape:", df.shape)
-print("\nFirst few rows of the dataset:")
-display(df.head())
+# Create a sample for visualization
+sample_size = 10000
+df_sample = df.sample(n=min(sample_size, len(df)), random_state=42)
 
-print("\nDataset Info:")
-print(df.info())
+# Cell 3: Initial Data Overview
+print(f"Dataset Shape: {df.shape}")
+print(f"Number of rows: {df.shape[0]:,}")
+print(f"Number of columns: {df.shape[1]:,}")
 
-# Cell 4: Check Missing Values
-# Display missing values count for each column
-missing_values = df.isnull().sum()
-missing_percentages = (missing_values / len(df)) * 100
-missing_data = pd.DataFrame({
-    'Missing Values': missing_values,
-    'Percentage Missing': missing_percentages
-})
-print("Missing Values Analysis:")
-display(missing_data[missing_data['Missing Values'] > 0])
-
-# Cell 5: Numeric Data Summary
-# Generate descriptive statistics for numeric columns
-print("Numeric Columns Summary:")
-display(df.describe())
-
-# Cell 6: Categorical Data Summary
-# Analyze categorical columns
-categorical_cols = df.select_dtypes(include=['object', 'category']).columns
-for col in categorical_cols:
-    print(f"\nValue counts for {col}:")
-    display(pd.DataFrame({
-        'Count': df[col].value_counts(),
-        'Percentage': df[col].value_counts(normalize=True) * 100
-    }))
-
-# Cell 7: Distribution Plots for Numeric Variables
+# Identify column types
 numeric_cols = df.select_dtypes(include=['int64', 'float64']).columns
-for col in numeric_cols:
+categorical_cols = df.select_dtypes(include=['object', 'category', 'bool']).columns
+
+print("\nColumn Type Distribution:")
+print(f"Numerical columns: {len(numeric_cols)}")
+print(f"Categorical columns: {len(categorical_cols)}")
+
+print("\nMemory Usage:")
+print(f"{df.memory_usage().sum() / 1024**2:.2f} MB")
+
+# Cell 4: Column Analysis
+# Create detailed column analysis
+column_analysis = pd.DataFrame({
+    'dtype': df.dtypes,
+    'non_null_count': df.count(),
+    'null_count': df.isnull().sum(),
+    'null_percentage': (df.isnull().sum() / len(df) * 100).round(2),
+    'unique_count': df.nunique(),
+    'memory_MB': df.memory_usage(deep=True) / 1024**2
+})
+
+column_analysis['unique_percentage'] = (column_analysis['unique_count'] / len(df) * 100).round(2)
+column_analysis['column_type'] = column_analysis['dtype'].apply(
+    lambda x: 'Numeric' if pd.api.types.is_numeric_dtype(x) 
+    else 'Categorical' if pd.api.types.is_object_dtype(x) or pd.api.types.is_categorical_dtype(x)
+    else 'Other'
+)
+
+print("\nColumn Analysis (Top 20 by memory usage):")
+display(column_analysis.sort_values('memory_MB', ascending=False).head(20))
+
+# Cell 5: Missing Values Analysis
+# Calculate missing values statistics
+missing_stats = column_analysis[['null_count', 'null_percentage', 'column_type']].copy()
+missing_stats = missing_stats[missing_stats['null_count'] > 0]
+
+print("\nMissing Values Summary by Column Type:")
+print(missing_stats.groupby('column_type')['null_count'].agg(['count', 'mean', 'max']))
+
+print("\nTop 20 Columns with Missing Values:")
+display(missing_stats.sort_values('null_count', ascending=False).head(20))
+
+# Cell 6: Numeric Data Analysis
+# Calculate summary statistics for numeric columns
+print("\nNumeric Columns Summary Statistics:")
+numeric_summary = df[numeric_cols].describe().round(3)
+display(numeric_summary)
+
+# Plot distributions for first 12 numeric columns (or less if fewer exist)
+cols_to_plot = numeric_cols[:min(12, len(numeric_cols))]
+
+for i in range(0, len(cols_to_plot), 3):
     plt.figure(figsize=(15, 5))
-    
-    # Create subplot for histogram
-    plt.subplot(1, 2, 1)
-    sns.histplot(data=df, x=col, kde=True)
-    plt.title(f'Distribution of {col}')
-    
-    # Create subplot for box plot
-    plt.subplot(1, 2, 2)
-    sns.boxplot(x=df[col])
-    plt.title(f'Box Plot of {col}')
-    
+    for j, col in enumerate(cols_to_plot[i:i+3]):
+        plt.subplot(1, 3, j+1)
+        plt.hist(df_sample[col].dropna(), bins=30, edgecolor='black')
+        plt.title(f'{col}\nDistribution')
+        plt.xlabel(col)
     plt.tight_layout()
     plt.show()
 
-# Cell 8: Correlation Analysis
-# Create correlation matrix for numeric columns
+# Cell 7: Categorical Data Analysis
+print("\nCategorical Columns Summary:")
+for col in categorical_cols[:20]:  # First 20 categorical columns
+    print(f"\n{col}:")
+    n_unique = df[col].nunique()
+    print(f"Unique values: {n_unique}")
+    
+    if n_unique <= 10:
+        print("Complete value counts:")
+        display(df[col].value_counts())
+    else:
+        print(f"Top 10 values (out of {n_unique}):")
+        display(df[col].value_counts().head(10))
+        
+    # Calculate percentage of missing values
+    missing_pct = (df[col].isnull().sum() / len(df) * 100).round(2)
+    print(f"Missing values: {missing_pct}%")
+
+# Cell 8: Correlation Analysis for Numeric Columns
+# Calculate correlations using sample data
+print("\nCalculating correlations for numeric columns...")
+correlation_matrix = df_sample[numeric_cols].corr()
+
+# Plot correlation matrix
 plt.figure(figsize=(12, 8))
-correlation_matrix = df[numeric_cols].corr()
-sns.heatmap(correlation_matrix, annot=True, cmap='coolwarm', center=0)
-plt.title('Correlation Matrix')
+plt.imshow(correlation_matrix, cmap='RdBu', aspect='auto')
+plt.colorbar()
+plt.xticks(range(len(correlation_matrix.columns)), correlation_matrix.columns, rotation=90)
+plt.yticks(range(len(correlation_matrix.columns)), correlation_matrix.columns)
+plt.title('Correlation Matrix Heatmap (Sample Data)')
+plt.tight_layout()
 plt.show()
 
-# Cell 9: Categorical Variable Visualizations
+# Find and display top correlations
+correlations = []
+for i in range(len(correlation_matrix.columns)):
+    for j in range(i):
+        correlations.append({
+            'col1': correlation_matrix.index[i],
+            'col2': correlation_matrix.columns[j],
+            'correlation': abs(correlation_matrix.iloc[i, j])
+        })
+
+top_correlations = pd.DataFrame(correlations)
+top_correlations = top_correlations.sort_values('correlation', ascending=False)
+
+print("\nTop 15 Strongest Correlations:")
+display(top_correlations.head(15))
+
+# Cell 9: Categorical Relationships
+# Analyze relationships between categorical variables with few unique values
+analyzable_cats = [col for col in categorical_cols 
+                  if df_sample[col].nunique() <= 10][:5]
+
+if len(analyzable_cats) >= 2:
+    for i in range(len(analyzable_cats)):
+        for j in range(i+1, len(analyzable_cats)):
+            col1, col2 = analyzable_cats[i], analyzable_cats[j]
+            print(f"\nContingency Table: {col1} vs {col2}")
+            cont_table = pd.crosstab(
+                df_sample[col1],
+                df_sample[col2],
+                normalize='index'
+            ).round(2)
+            display(cont_table)
+
+# Cell 10: Data Quality Summary
+print("\nData Quality Summary:")
+
+# Missing values summary
+high_missing = column_analysis[column_analysis['null_percentage'] > 20]
+print(f"\nColumns with >20% missing values: {len(high_missing)}")
+if not high_missing.empty:
+    print("\nTop 10 columns with high missing values:")
+    display(high_missing[['null_percentage']].head(10))
+
+# Cardinality check for categorical columns
+print("\nCategorical Columns with High Cardinality:")
 for col in categorical_cols:
-    plt.figure(figsize=(10, 6))
-    sns.countplot(data=df, x=col, order=df[col].value_counts().index)
-    plt.title(f'Count Plot of {col}')
-    plt.xticks(rotation=45)
-    plt.tight_layout()
-    plt.show()
+    unique_ratio = df[col].nunique() / len(df)
+    if unique_ratio > 0.5:
+        print(f"{col}: {df[col].nunique():,} unique values ({unique_ratio:.1%} of rows)")
 
-# Cell 10: Statistical Tests
-# For numeric columns: Shapiro-Wilk test for normality
-print("Normality Tests (Shapiro-Wilk):")
-for col in numeric_cols:
-    statistic, p_value = stats.shapiro(df[col].dropna())
-    print(f"\n{col}:")
-    print(f"Statistic: {statistic:.4f}")
-    print(f"P-value: {p_value:.4f}")
-    print("Normal distribution?" if p_value > 0.05 else "Not normal distribution")
-
-# Cell 11: Outlier Detection
-# Calculate Z-scores for numeric columns
-print("\nOutlier Detection using Z-scores:")
-for col in numeric_cols:
-    z_scores = np.abs(stats.zscore(df[col].dropna()))
-    outliers = len(z_scores[z_scores > 3])
-    print(f"\n{col}:")
-    print(f"Number of outliers (|Z-score| > 3): {outliers}")
-    print(f"Percentage of outliers: {(outliers/len(df[col].dropna()))*100:.2f}%")
+# Memory usage by type
+print("\nMemory Usage by Column Type:")
+memory_by_type = column_analysis.groupby('column_type')['memory_MB'].agg(['sum', 'mean'])
+display(memory_by_type)
