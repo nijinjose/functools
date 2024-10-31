@@ -28,16 +28,40 @@ print("Missing values per column:\n", missing_values)
 # Stage 3: Data Cleaning
 
 # Handling missing values
+import matplotlib.pyplot as plt
+import seaborn as sns
+import math
+
+# Handling missing values
 numerical_cols = df.select_dtypes(include=['float64', 'int64']).columns
 categorical_cols = df.select_dtypes(include=['object']).columns
 
-# Plot missing values
-plt.figure(figsize=(10, 6))
-sns.barplot(x=missing_values.index, y=missing_values.values)
-plt.xticks(rotation=90)
-plt.title('Missing Values per Column')
-plt.ylabel('Number of Missing Values')
-plt.show()
+# Calculate missing values
+missing_values = df.isnull().sum()
+missing_values = missing_values[missing_values > 0]  # Only show columns with missing values
+
+# Sort by number of missing values
+missing_values_sorted = missing_values.sort_values(ascending=False)
+
+# Number of columns to show per plot
+chunk_size = 20
+num_plots = math.ceil(len(missing_values_sorted) / chunk_size)
+
+# Create multiple plots
+for i in range(num_plots):
+    # Select a subset of columns for each plot
+    start = i * chunk_size
+    end = start + chunk_size
+    chunk = missing_values_sorted[start:end]
+    
+    # Plot each chunk
+    plt.figure(figsize=(10, 8))
+    sns.barplot(y=chunk.index, x=chunk.values, orient='h')
+    plt.title(f'Missing Values per Column (Chunk {i+1})')
+    plt.xlabel('Number of Missing Values')
+    plt.ylabel('Columns')
+    plt.show()
+
 
 # Stage 4: Univariate Analysis
 
