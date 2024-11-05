@@ -4,6 +4,19 @@ sns.heatmap(data.isnull(), cbar=False, cmap='viridis')
 plt.title("Missing Values Heatmap")
 plt.show()
 
+# Visualizing Missing Values in Batches
+batch_size = 50
+num_batches = len(data.columns) // batch_size + 1
+
+for i in range(num_batches):
+    start_col = i * batch_size
+    end_col = min((i + 1) * batch_size, len(data.columns))
+    plt.figure(figsize=(12, 6))
+    sns.heatmap(data.iloc[:, start_col:end_col].isnull(), cbar=False, cmap='viridis')
+    plt.title(f"Missing Values Heatmap (Columns {start_col} to {end_col})")
+    plt.show()
+
+
 # Analyze Numerical Features
 # Due to the large number of features (800), we'll sample a subset for visualization
 sampled_numerical_columns = X_train.select_dtypes(include=['int64', 'float64']).columns[:10]
