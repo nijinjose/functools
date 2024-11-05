@@ -17,6 +17,21 @@ for i in range(num_batches):
     plt.show()
 
 
+import matplotlib.pyplot as plt
+numeric_cols = df.select_dtypes(include=['int64', 'float64']).columns
+for feature in numeric_cols:
+    print(feature)  # Replace with any operation you want to perform on each feature
+
+for feature in numeric_cols:
+    plt.figure(figsize=(8, 4))
+    plt.hist(df[feature].dropna(), bins=30, edgecolor='black')
+    plt.title(f'Distribution of {feature}')
+    plt.xlabel(feature)
+    plt.ylabel('Frequency')
+    plt.grid(axis='y', linestyle='--')
+    plt.show()
+
+
 # Analyze Numerical Features
 # Due to the large number of features (800), we'll sample a subset for visualization
 sampled_numerical_columns = X_train.select_dtypes(include=['int64', 'float64']).columns[:10]
