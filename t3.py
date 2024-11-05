@@ -16,7 +16,7 @@ for i in range(num_batches):
     plt.title(f"Missing Values Heatmap (Columns {start_col} to {end_col})")
     plt.show()
 
-
+# Visulise the histogram for numeric 
 import matplotlib.pyplot as plt
 numeric_cols = df.select_dtypes(include=['int64', 'float64']).columns
 for feature in numeric_cols:
@@ -30,6 +30,36 @@ for feature in numeric_cols:
     plt.ylabel('Frequency')
     plt.grid(axis='y', linestyle='--')
     plt.show()
+
+
+
+# Visulise the histogram to Save
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_pdf import PdfPages
+
+# Create a PdfPages object to save plots
+pdf = PdfPages('histograms.pdf')
+
+# Loop through the numeric columns and create histograms
+for feature in numeric_cols:
+    # Plot histogram
+    df[feature].plot(kind='hist', bins=30, edgecolor='black', figsize=(8, 4), title=f'Distribution of {feature}')
+    plt.xlabel(feature)
+    plt.ylabel('Frequency')
+    plt.grid(axis='y', linestyle='--')
+    
+    # Save to the PDF
+    pdf.savefig()  # Saves the current figure into the PDF
+    plt.close()    # Close the current figure to keep memory usage low
+
+# Close the PdfPages object
+pdf.close()
+
+print("All histograms saved to 'histograms.pdf'")
+
+
+
+
 
 
 # Analyze Numerical Features
