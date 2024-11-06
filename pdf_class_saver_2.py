@@ -166,19 +166,33 @@ class DataVisualizer:
 
 # Example usage in notebook:
 if __name__ == '__main__':
-    # Create sample data
-    df = pd.DataFrame({
-        'A': np.random.normal(0, 1, 1000),
-        'B': np.random.exponential(2, 1000),
-        'C': np.random.uniform(0, 10, 1000),
-        'D': np.random.chisquare(5, 1000)
-    })
-    
-    # Create visualizer
-    viz = DataVisualizer()
-    
-    # Plot distributions
-    viz.plot_numeric_distributions(df, save_pdf='distributions.pdf')
-    
-    # Plot correlation heatmap
-    viz.plot_correlation_heatmap(df, save_pdf='correlations.pdf')
+
+
+# Usuage 
+# 1. Just display in notebook (no PDF)
+viz.plot_numeric_distributions(df, plots_per_page=6)
+
+# 2. Display AND save to PDF
+viz.plot_numeric_distributions(
+    df,
+    plots_per_page=6,
+    save_pdf='distributions.pdf'
+)
+
+# 3. Plot specific columns only
+selected_columns = ['feature1', 'feature2', 'feature3']
+viz.plot_numeric_distributions(
+    df,
+    columns=selected_columns,
+    plots_per_page=6
+)
+
+# 4. Plot correlation heatmap
+viz.plot_correlation_heatmap(df, save_pdf='correlations.pdf')
+
+# 5. Analyze subset of data
+subset_df = df[df['some_column'] > some_value]
+viz.plot_numeric_distributions(
+    subset_df,
+    save_pdf='subset_analysis.pdf'
+)
