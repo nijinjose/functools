@@ -4,25 +4,21 @@ import pandas as pd
 import numpy as np
 import gc
 from typing import Optional, List, Union, Dict
-import seaborn as sns
 from pathlib import Path
 import json
 from datetime import datetime
 import sys
-from tabulate import tabulate  # for nice terminal tables
+from tabulate import tabulate
 
 class DataVisualizer:
     """
-    Enhanced utility class for data visualization with terminal output 
-    and file saving capabilities.
+    Utility class for data visualization using only matplotlib.
     """
     
     def __init__(self, 
-                 style: str = 'seaborn',
                  output_dir: Optional[str] = None,
                  dpi: int = 300):
         """Initialize visualizer with output settings."""
-        plt.style.use(style)
         self.dpi = dpi
         self.output_dir = Path(output_dir) if output_dir else Path.cwd()
         self.output_dir.mkdir(parents=True, exist_ok=True)
@@ -64,9 +60,8 @@ class DataVisualizer:
                                  columns: Optional[List[str]] = None,
                                  plots_per_page: int = 6,
                                  figsize: tuple = (15, 10),
-                                 save_pdf: Optional[str] = None,
-                                 show_kde: bool = True) -> Dict[str, Dict]:
-        """Enhanced distribution plotting with comprehensive output."""
+                                 save_pdf: Optional[str] = None) -> Dict[str, Dict]:
+        """Plot distributions using matplotlib histograms."""
         numeric_cols = df.select_dtypes(include=['int64', 'float64']).columns.tolist() \
                       if columns is None else \
                       [col for col in columns if df[col].dtype in ['int64', 'float64']]
@@ -75,11 +70,7 @@ class DataVisualizer:
             raise ValueError("No numeric columns found in the dataset")
         
         print(f"\nAnalyzing {len(numeric_cols)} numeric columns...")
-        
-        # Initialize statistics dictionary
         stats_dict = {}
-        
-        # Setup PDF
         pdf_path = self.output_dir / save_pdf if save_pdf else None
         pdf_handle = PdfPages(pdf_path) if pdf_path else None
         
@@ -90,21 +81,28 @@ class DataVisualizer:
                 start_idx = fig_num * plots_per_page
                 batch_cols = numeric_cols[start_idx:start_idx + plots_per_page]
                 
-                # Create subplots
                 fig, axes = plt.subplots(plots_per_page // 2, 2, figsize=figsize)
                 axes = axes.ravel()
                 
-                # Process each column in batch
                 for idx, col in enumerate(batch_cols):
                     ax = axes[idx]
                     data = df[col].dropna()
                     
-                    # Plot distribution
-                    sns.histplot(data=data, ax=ax, kde=show_kde)
+                    # Create histogram
+                    ax.hist(data, bins=30, edgecolor='black', alpha=0.7)
+                    
+                    # Add mean and median lines
+                    mean_val = data.mean()
+                    median_val = data.median()
+                    ax.axvline(mean_val, color='red', linestyle='--', alpha=0.8, 
+                             label=f'Mean: {mean_val:.2f}')
+                    ax.axvline(median_val, color='green', linestyle='--', alpha=0.8, 
+                             label=f'Median: {median_val:.2f}')
                     
                     # Customize plot
                     ax.set_title(f'Distribution of {col}')
                     ax.grid(True, alpha=0.3)
+                    ax.legend()
                     
                     # Calculate statistics
                     stats = {
@@ -169,7 +167,7 @@ class DataVisualizer:
                                figsize: tuple = (12, 10),
                                save_pdf: Optional[str] = None,
                                min_correlation: float = 0.0) -> pd.DataFrame:
-        """Enhanced correlation heatmap with detailed output."""
+        """Plot correlation heatmap using matplotlib."""
         numeric_cols = df.select_dtypes(include=['int64', 'float64']).columns.tolist() \
                       if columns is None else \
                       [col for col in columns if df[col].dtype in ['int64', 'float64']]
@@ -185,15 +183,26 @@ class DataVisualizer:
             corr_matrix = corr_matrix.where(mask, 0)
         
         # Plot heatmap
-        plt.figure(figsize=figsize)
-        sns.heatmap(corr_matrix,
-                   annot=True,
-                   cmap='coolwarm',
-                   center=0,
-                   fmt='.2f',
-                   square=True)
+        fig, ax = plt.subplots(figsize=figsize)
+        im = ax.imshow(corr_matrix, cmap='coolwarm', aspect='auto', vmin=-1, vmax=1)
+        
+        # Add colorbar
+        plt.colorbar(im)
+        
+        # Add labels
+        ax.set_xticks(np.arange(len(numeric_cols)))
+        ax.set_yticks(np.arange(len(numeric_cols)))
+        ax.set_xticklabels(numeric_cols, rotation=45, ha='right')
+        ax.set_yticklabels(numeric_cols)
+        
+        # Add correlation values
+        for i in range(len(numeric_cols)):
+            for j in range(len(numeric_cols)):
+                text = ax.text(j, i, f'{corr_matrix.iloc[i, j]:.2f}',
+                             ha='center', va='center')
         
         plt.title('Feature Correlation Heatmap')
+        plt.tight_layout()
         
         # Save if requested
         if save_pdf:
@@ -222,29 +231,3 @@ class DataVisualizer:
         plt.close()
         
         return corr_matrix
-
-# Example usage
-if __name__ == "__main__":
-    # Create sample data
-    df = pd.DataFrame({
-        'A': np.random.normal(0, 1, 1000),
-        'B': np.random.exponential(2, 1000),
-        'C': np.random.uniform(0, 10, 1000),
-        'D': np.random.chisquare(5, 1000)
-    })
-    
-    # Initialize visualizer
-    viz = DataVisualizer(output_dir='visualization_output')
-    
-    # Plot distributions
-    stats = viz.plot_numeric_distributions(
-        df,
-        save_pdf='distributions.pdf'
-    )
-    
-    # Plot correlations
-    corr_matrix = viz.plot_correlation_heatmap(
-        df,
-        save_pdf='correlations.pdf',
-        min_correlation=0.3
-    )
