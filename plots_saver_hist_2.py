@@ -45,6 +45,21 @@ class DataVisualizer:
         stats['unique'] = data.nunique()
         return {k: float(v) for k, v in stats.items()}
     
+    def _print_statistics(self, stats: dict, title: str = "Numeric Columns Statistics") -> None:
+        """Print formatted statistics to the terminal."""
+        print(f"\n{'-'*20} {title} {'-'*20}")
+        if not stats:
+            print("No statistics available.")
+            return
+        
+        # Create a DataFrame from the stats dictionary
+        stats_df = pd.DataFrame(stats).transpose()
+        # Select and order the columns to display
+        display_columns = ['count', 'mean', 'std', 'min', '25%', '50%', '75%', 'max',
+                           'skewness', 'kurtosis', 'missing', 'missing_pct', 'unique']
+        stats_df = stats_df[display_columns]
+        print(stats_df)
+    
     def _save_statistics(self, stats: dict, filename: str) -> None:
         """Save statistics to JSON file."""
         file_path = self.logs_dir / f"{filename}_{self.timestamp}.json"
@@ -53,18 +68,18 @@ class DataVisualizer:
         print(f"\nStatistics saved to: {file_path}")
 
     def plot_numeric_distributions(self, 
-                                 df: pd.DataFrame,
-                                 columns: list = None,
-                                 plots_per_page: int = 6,
-                                 figsize: tuple = (15, 10),
-                                 save_pdf: str = None) -> dict:
+                                   df: pd.DataFrame,
+                                   columns: list = None,
+                                   plots_per_page: int = 6,
+                                   figsize: tuple = (15, 10),
+                                   save_pdf: str = None) -> dict:
         """
         Plot distributions of numeric columns with multiple plots per page and KDE.
         """
         numeric_cols = columns or df.select_dtypes(include=np.number).columns.tolist()
         if not numeric_cols:
             raise ValueError("No numeric columns found in the dataset")
-            
+                
         print(f"\nAnalyzing {len(numeric_cols)} numeric columns...")
         
         stats_dict = {}
@@ -73,39 +88,39 @@ class DataVisualizer:
         
         try:
             total_figures = (len(numeric_cols) + plots_per_page - 1) // plots_per_page
-            
+                
             for fig_num in range(total_figures):
                 start_idx = fig_num * plots_per_page
                 batch_cols = numeric_cols[start_idx:start_idx + plots_per_page]
-                
+                    
                 # Create subplot grid
                 fig, axes = plt.subplots(plots_per_page // 2, 2, figsize=figsize)
                 axes = axes.ravel()
-                
+                    
                 for idx, col in enumerate(batch_cols):
                     ax = axes[idx]
-                    data = df[col].dropna()
-                    
+                    data = df[col]
+                        
                     # Calculate statistics
                     stats = self._calculate_statistics(data)
                     stats_dict[col] = stats
-                    
+                        
                     # Create histogram with KDE
                     sns.histplot(data=data, ax=ax, kde=True, 
-                               color='skyblue', edgecolor='black',
-                               alpha=0.6, bins=30)
-                    
+                                 color='skyblue', edgecolor='black',
+                                 alpha=0.6, bins=30)
+                        
                     # Add mean and median lines
                     ax.axvline(stats['mean'], color='red', linestyle='--', 
-                             label=f"Mean: {stats['mean']:.2f}")
+                               label=f"Mean: {stats['mean']:.2f}")
                     ax.axvline(stats['50%'], color='green', linestyle='--', 
-                             label=f"Median: {stats['50%']:.2f}")
-                    
+                               label=f"Median: {stats['50%']:.2f}")
+                        
                     # Customize plot
                     ax.set_title(f'Distribution of {col}')
                     ax.legend(fontsize='small')
                     ax.grid(True, alpha=0.3)
-                    
+                        
                     # Add statistics text
                     stats_text = (
                         f"Count: {stats['count']:.0f}\n"
@@ -116,39 +131,42 @@ class DataVisualizer:
                         f"Missing: {stats['missing']:.0f}\n"
                         f"Missing %: {stats['missing_pct']:.1f}%"
                     )
-                    
+                        
                     ax.text(0.95, 0.95, stats_text,
-                           transform=ax.transAxes,
-                           verticalalignment='top',
-                           horizontalalignment='right',
-                           bbox=dict(facecolor='white', alpha=0.8),
-                           fontsize='small')
-                
+                            transform=ax.transAxes,
+                            verticalalignment='top',
+                            horizontalalignment='right',
+                            bbox=dict(facecolor='white', alpha=0.8),
+                            fontsize='small')
+                    
                 # Hide empty subplots
                 for idx in range(len(batch_cols), len(axes)):
                     axes[idx].set_visible(False)
-                
+                    
                 # Adjust layout
                 plt.tight_layout()
-                
+                    
                 if pdf_handle:
                     pdf_handle.savefig(fig, dpi=self.dpi, bbox_inches='tight')
-                
+                    
                 plt.show()
                 plt.close()
-                
+                    
                 print(f"Processed figure {fig_num + 1} of {total_figures}")
-            
+                
+            # Print statistics to terminal
+            self._print_statistics(stats_dict)
+                
             # Save statistics
             if save_pdf:
                 stats_filename = save_pdf.replace('.pdf', '_stats')
                 self._save_statistics(stats_dict, stats_filename)
-                
+                    
         finally:
             if pdf_handle:
                 pdf_handle.close()
                 print(f"\nPlots saved to: {pdf_path}")
-                
+                    
         return stats_dict
 
 # Example usage with different types of distributions
