@@ -99,16 +99,19 @@ class DataVisualizer:
                     
                 for idx, col in enumerate(batch_cols):
                     ax = axes[idx]
-                    data = df[col]
+                    data = df[col].dropna()
                         
                     # Calculate statistics
                     stats = self._calculate_statistics(data)
                     stats_dict[col] = stats
                         
-                    # Create histogram with KDE
-                    sns.histplot(data=data, ax=ax, kde=True, 
+                    # Plot histogram
+                    sns.histplot(data=data, ax=ax, 
                                  color='skyblue', edgecolor='black',
-                                 alpha=0.6, bins=30)
+                                 alpha=0.6, bins=30, stat='density')
+                    
+                    # Plot KDE separately
+                    sns.kdeplot(data=data, ax=ax, color='darkblue', linewidth=2)
                         
                     # Add mean and median lines
                     ax.axvline(stats['mean'], color='red', linestyle='--', 
