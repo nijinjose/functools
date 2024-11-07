@@ -10,6 +10,16 @@ from datetime import datetime
 import sys
 from tabulate import tabulate
 
+
+class NumpyEncoder(json.JSONEncoder):
+    """This class helps convert NumPy data types to regular Python types for JSON saving"""
+    def default(self, obj):
+        if isinstance(obj, (np.int64, np.int32)):  # For integer types
+            return int(obj)
+        elif isinstance(obj, (np.float64, np.float32)):  # For float types
+            return float(obj)
+        return json.JSONEncoder.default(self, obj)
+
 class DataVisualizer:
     """
     Utility class for data visualization using only matplotlib.
