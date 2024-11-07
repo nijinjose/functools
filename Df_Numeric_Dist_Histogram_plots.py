@@ -10,25 +10,23 @@ from datetime import datetime
 import sys
 from tabulate import tabulate
 
-
 class NumpyEncoder(json.JSONEncoder):
-    """This class helps convert NumPy data types to regular Python types for JSON saving"""
+    """Custom JSON encoder for NumPy types."""
     def default(self, obj):
-        if isinstance(obj, (np.int64, np.int32)):  # For integer types
+        if isinstance(obj, (np.int_, np.intc, np.intp, np.int8,
+                          np.int16, np.int32, np.int64, np.uint8,
+                          np.uint16, np.uint32, np.uint64)):
             return int(obj)
-        elif isinstance(obj, (np.float64, np.float32)):  # For float types
+        elif isinstance(obj, (np.float_, np.float16, np.float32, np.float64)):
             return float(obj)
+        elif isinstance(obj, (np.ndarray,)):
+            return obj.tolist()
         return json.JSONEncoder.default(self, obj)
 
 class DataVisualizer:
-    """
-    Utility class for data visualization using only matplotlib.
-    """
-    
     def __init__(self, 
                  output_dir: Optional[str] = None,
                  dpi: int = 300):
-        """Initialize visualizer with output settings."""
         self.dpi = dpi
         self.output_dir = Path(output_dir) if output_dir else Path.cwd()
         self.output_dir.mkdir(parents=True, exist_ok=True)
@@ -37,41 +35,60 @@ class DataVisualizer:
         self.logs_dir = self.output_dir / 'logs'
         self.logs_dir.mkdir(exist_ok=True)
         
-        # Setup timestamp for file naming
         self.timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
     
+    def _convert_to_serializable(self, obj):
+        """Convert numpy types to Python native types."""
+        if isinstance(obj, dict):
+            return {key: self._convert_to_serializable(value) for key, value in obj.items()}
+        elif isinstance(obj, (list, tuple)):
+            return [self._convert_to_serializable(item) for item in obj]
+        elif isinstance(obj, (np.int_, np.intc, np.intp, np.int8,
+                            np.int16, np.int32, np.int64, np.uint8,
+                            np.uint16, np.uint32, np.uint64)):
+            return int(obj)
+        elif isinstance(obj, (np.float_, np.float16, np.float32, np.float64)):
+            return float(obj)
+        elif isinstance(obj, np.ndarray):
+            return obj.tolist()
+        elif pd.isna(obj):  # Handle NaN/None values
+            return None
+        return obj
+    
     def _save_statistics(self, stats: Dict, filename: str) -> None:
-        """Save statistics to JSON file."""
+        """Save statistics to JSON file with proper type conversion."""
         file_path = self.logs_dir / f"{filename}_{self.timestamp}.json"
+        
+        # Convert all numpy types to Python native types
+        serializable_stats = self._convert_to_serializable(stats)
+        
         with open(file_path, 'w') as f:
-            json.dump(stats, f, indent=4)
+            json.dump(serializable_stats, f, indent=4, cls=NumpyEncoder)
         print(f"\nStatistics saved to: {file_path}")
     
-    def _print_statistics(self, stats: Dict, title: str) -> None:
-        """Print formatted statistics to terminal."""
-        print(f"\n{'-'*20} {title} {'-'*20}")
-        
-        # Convert stats to table format
-        table_data = []
-        for col, col_stats in stats.items():
-            row = [col]
-            row.extend([f"{v:.2f}" if isinstance(v, (float, np.floating)) else v 
-                       for v in col_stats.values()])
-            table_data.append(row)
-        
-        # Get headers
-        headers = ['Column'] + list(next(iter(stats.values())).keys())
-        
-        # Print table
-        print(tabulate(table_data, headers=headers, tablefmt='grid'))
-    
+    def _get_statistics(self, data: pd.Series) -> Dict:
+        """Calculate statistics with proper type conversion."""
+        stats = {
+            'mean': float(data.mean()),
+            'median': float(data.median()),
+            'std': float(data.std()),
+            'skew': float(data.skew()),
+            'kurtosis': float(data.kurtosis()),
+            'missing': int(data.isnull().sum()),
+            'missing_pct': float((data.isnull().sum() / len(data)) * 100),
+            'unique_values': int(data.nunique()),
+            'min': float(data.min()),
+            'max': float(data.max())
+        }
+        return stats
+
     def plot_numeric_distributions(self, 
                                  df: pd.DataFrame,
                                  columns: Optional[List[str]] = None,
                                  plots_per_page: int = 6,
                                  figsize: tuple = (15, 10),
                                  save_pdf: Optional[str] = None) -> Dict[str, Dict]:
-        """Plot distributions using matplotlib histograms."""
+        """Plot distributions with proper type handling."""
         numeric_cols = df.select_dtypes(include=['int64', 'float64']).columns.tolist() \
                       if columns is None else \
                       [col for col in columns if df[col].dtype in ['int64', 'float64']]
@@ -102,34 +119,23 @@ class DataVisualizer:
                     ax.hist(data, bins=30, edgecolor='black', alpha=0.7)
                     
                     # Add mean and median lines
-                    mean_val = data.mean()
-                    median_val = data.median()
+                    mean_val = float(data.mean())
+                    median_val = float(data.median())
                     ax.axvline(mean_val, color='red', linestyle='--', alpha=0.8, 
                              label=f'Mean: {mean_val:.2f}')
                     ax.axvline(median_val, color='green', linestyle='--', alpha=0.8, 
                              label=f'Median: {median_val:.2f}')
                     
-                    # Customize plot
                     ax.set_title(f'Distribution of {col}')
                     ax.grid(True, alpha=0.3)
                     ax.legend()
                     
                     # Calculate statistics
-                    stats = {
-                        'mean': data.mean(),
-                        'median': data.median(),
-                        'std': data.std(),
-                        'skew': data.skew(),
-                        'kurtosis': data.kurtosis(),
-                        'missing': df[col].isnull().sum(),
-                        'missing_pct': (df[col].isnull().sum() / len(df)) * 100,
-                        'unique_values': df[col].nunique(),
-                        'min': data.min(),
-                        'max': data.max()
-                    }
+                    stats = self._get_statistics(df[col])
+                    stats_dict[col] = stats
                     
                     # Add stats to plot
-                    stats_text = "\n".join([f"{k}: {v:.2f}" if isinstance(v, (float, np.floating))
+                    stats_text = "\n".join([f"{k}: {v:.2f}" if isinstance(v, float)
                                           else f"{k}: {v}" 
                                           for k, v in stats.items()])
                     ax.text(0.95, 0.95, stats_text,
@@ -137,10 +143,7 @@ class DataVisualizer:
                            verticalalignment='top',
                            horizontalalignment='right',
                            bbox=dict(facecolor='white', alpha=0.8))
-                    
-                    stats_dict[col] = stats
                 
-                # Handle empty subplots
                 for idx in range(len(batch_cols), len(axes)):
                     axes[idx].set_visible(False)
                 
@@ -170,42 +173,34 @@ class DataVisualizer:
                 print(f"\nPlots saved to: {pdf_path}")
         
         return stats_dict
-    
+
     def plot_correlation_heatmap(self,
                                df: pd.DataFrame,
                                columns: Optional[List[str]] = None,
                                figsize: tuple = (12, 10),
                                save_pdf: Optional[str] = None,
                                min_correlation: float = 0.0) -> pd.DataFrame:
-        """Plot correlation heatmap using matplotlib."""
+        """Plot correlation heatmap with proper type handling."""
         numeric_cols = df.select_dtypes(include=['int64', 'float64']).columns.tolist() \
                       if columns is None else \
                       [col for col in columns if df[col].dtype in ['int64', 'float64']]
         
         print(f"\nCalculating correlations for {len(numeric_cols)} columns...")
-        
-        # Calculate correlations
         corr_matrix = df[numeric_cols].corr()
         
-        # Filter correlations if requested
         if min_correlation > 0:
             mask = np.abs(corr_matrix) >= min_correlation
             corr_matrix = corr_matrix.where(mask, 0)
         
-        # Plot heatmap
         fig, ax = plt.subplots(figsize=figsize)
         im = ax.imshow(corr_matrix, cmap='coolwarm', aspect='auto', vmin=-1, vmax=1)
-        
-        # Add colorbar
         plt.colorbar(im)
         
-        # Add labels
         ax.set_xticks(np.arange(len(numeric_cols)))
         ax.set_yticks(np.arange(len(numeric_cols)))
         ax.set_xticklabels(numeric_cols, rotation=45, ha='right')
         ax.set_yticklabels(numeric_cols)
         
-        # Add correlation values
         for i in range(len(numeric_cols)):
             for j in range(len(numeric_cols)):
                 text = ax.text(j, i, f'{corr_matrix.iloc[i, j]:.2f}',
@@ -214,7 +209,6 @@ class DataVisualizer:
         plt.title('Feature Correlation Heatmap')
         plt.tight_layout()
         
-        # Save if requested
         if save_pdf:
             pdf_path = self.output_dir / save_pdf
             plt.savefig(pdf_path, bbox_inches='tight', dpi=self.dpi)
@@ -222,22 +216,35 @@ class DataVisualizer:
             
             # Save correlation matrix
             matrix_filename = save_pdf.replace('.pdf', '_matrix')
-            corr_dict = corr_matrix.to_dict()
+            corr_dict = self._convert_to_serializable(corr_matrix.to_dict())
             self._save_statistics(corr_dict, matrix_filename)
-        
-        # Find and print high correlations
-        high_corr = corr_matrix[abs(corr_matrix) >= 0.7].unstack()
-        high_corr = high_corr[high_corr != 1.0].dropna()
-        
-        if not high_corr.empty:
-            print("\nHigh Correlations (|r| >= 0.7):")
-            high_corr_data = [(idx[0], idx[1], val) for idx, val in high_corr.items()]
-            print(tabulate(high_corr_data, 
-                         headers=['Feature 1', 'Feature 2', 'Correlation'],
-                         tablefmt='grid',
-                         floatfmt='.2f'))
         
         plt.show()
         plt.close()
         
         return corr_matrix
+
+# Example usage
+if __name__ == "__main__":
+    # Create sample data
+    df = pd.DataFrame({
+        'A': np.random.normal(0, 1, 1000),
+        'B': np.random.exponential(2, 1000),
+        'C': np.random.uniform(0, 10, 1000),
+        'D': np.random.chisquare(5, 1000)
+    })
+    
+    # Initialize visualizer
+    viz = DataVisualizer(output_dir='visualization_output')
+    
+    # Plot and save distributions
+    stats = viz.plot_numeric_distributions(
+        df,
+        save_pdf='distributions.pdf'
+    )
+    
+    # Plot and save correlations
+    corr_matrix = viz.plot_correlation_heatmap(
+        df,
+        save_pdf='correlations.pdf'
+    )
