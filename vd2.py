@@ -88,10 +88,10 @@ def analyze_vehicle_maa_distribution(df: pd.DataFrame, col_advfe: str, col_targe
     return suggestions
 
 # Usage example:
-# Assuming 'df' is your DataFrame, 'vehicle_maa' is your feature, and 'churn_flag' is your target
-suggestions = analyze_vehicle_maa_distribution(vdf, 'Vehicle', 'Misc_Cancelled')
 
-# You can now use 'suggestions' to set parameters in your over_under_index function
+suggestions = analyze_vehicle_maa_distribution(df, 'a_col', 'b_col')
+
+#parameter pass 
 min_obs_over = suggestions['min_obs_over']
 min_obs_under = suggestions['min_obs_under']
 n_fea_over = suggestions['n_fea_over']
