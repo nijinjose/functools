@@ -34,16 +34,24 @@ def analyze_van_counts(df):
 van_counts = analyze_van_counts(df)
 
 
-def analyze_van_churn(df):
+
+def analyze_van_churn_v3(df):
     try:
-        # Group by van type and calculate statistics
-        van_analysis = df.groupby('vehicle_maa')['churn'].agg(['count', 'mean']).round(4)
+        # Step 1: Create empty DataFrame
+        van_analysis = pd.DataFrame()
         
-        # Now columns will be ['count', 'mean']
-        # Rename them properly
-        van_analysis.columns = ['total_vans', 'churn_rate']
+        # Step 2: Add each metric one by one
+        van_analysis['vehicle_maa'] = df['vehicle_maa'].unique()
         
-        # Sort by churn rate for both high and low churn
+        # Step 3: Add counts
+        count_series = df['vehicle_maa'].value_counts()
+        van_analysis['total_vans'] = van_analysis['vehicle_maa'].map(count_series)
+        
+        # Step 4: Add churn rates
+        churn_means = df.groupby('vehicle_maa')['churn'].mean()
+        van_analysis['churn_rate'] = van_analysis['vehicle_maa'].map(churn_means).round(4)
+        
+        # Step 5: Sort and display
         high_churn = van_analysis.sort_values('churn_rate', ascending=False)
         low_churn = van_analysis.sort_values('churn_rate', ascending=True)
         
@@ -57,15 +65,18 @@ def analyze_van_churn(df):
         return van_analysis
         
     except Exception as e:
-        print(f"Error in analysis: {str(e)}")
-        print("Debug information:")
-        print(f"Columns after aggregation: {van_analysis.columns}")
+        print(f"Error: {str(e)}")
         return None
 
 
 
-# Run analysis
-van_churn = analyze_van_churn(df_sample)
+
+
+
+
+
+
+
 
 
 
