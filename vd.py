@@ -34,32 +34,38 @@ def analyze_van_counts(df):
 van_counts = analyze_van_counts(df)
 
 
-
 def analyze_van_churn(df):
-    # Group by van type and calculate statistics
-    van_analysis = df.groupby('vehicle_maa')['churn'].agg([
-        ('total_vans', 'count'),
-        ('churn_rate', 'mean')
-    ]).round(4)
-    
-    # Sort by churn rate
-    high_churn = van_analysis.sort_values('churn_rate', ascending=False)
-    low_churn = van_analysis.sort_values('churn_rate', ascending=True)
-    
-    print("Churn Analysis:")
-    print("-" * 50)
-    print("\nTop 5 High Churn Vans:")
-    print(high_churn.head())
-    print("\nTop 5 Low Churn Vans:")
-    print(low_churn.head())
-    
-    return van_analysis
+    try:
+        # Group by van type and calculate statistics
+        van_analysis = df.groupby('vehicle_maa')['churn'].agg(['count', 'mean']).round(4)
+        
+        # Now columns will be ['count', 'mean']
+        # Rename them properly
+        van_analysis.columns = ['total_vans', 'churn_rate']
+        
+        # Sort by churn rate for both high and low churn
+        high_churn = van_analysis.sort_values('churn_rate', ascending=False)
+        low_churn = van_analysis.sort_values('churn_rate', ascending=True)
+        
+        print("Churn Analysis:")
+        print("-" * 50)
+        print("\nTop 5 High Churn Vans:")
+        print(high_churn.head())
+        print("\nTop 5 Low Churn Vans:")
+        print(low_churn.head())
+        
+        return van_analysis
+        
+    except Exception as e:
+        print(f"Error in analysis: {str(e)}")
+        print("Debug information:")
+        print(f"Columns after aggregation: {van_analysis.columns}")
+        return None
 
 
 
 # Run analysis
 van_churn = analyze_van_churn(df_sample)
-
 
 
 
