@@ -55,13 +55,7 @@ def analyze_van_churn(df):
     
     return van_analysis
 
-# Example usage with sample data
-# Let's create a small sample dataset to test
-sample_data = {
-    'vehicle_maa': ['fo_transit', 'fo_transit', 'vw_transport', 'mb_sprinter', 'pe_expert'] * 20,
-    'churn': [1, 0, 0, 1, 0] * 20
-}
-df_sample = pd.DataFrame(sample_data)
+
 
 # Run analysis
 van_churn = analyze_van_churn(df_sample)
