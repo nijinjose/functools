@@ -73,7 +73,38 @@ def analyze_van_churn_v3(df):
 
 
 
-
+def analyze_van_churn_v3(df):
+    try:
+        # Step 1: Create empty DataFrame
+        van_analysis = pd.DataFrame()
+        
+        # Step 2: Add each metric one by one
+        van_analysis['vehicle_maa'] = df['vehicle_maa'].unique()
+        
+        # Step 3: Add counts
+        count_series = df['vehicle_maa'].value_counts()
+        van_analysis['total_vans'] = van_analysis['vehicle_maa'].map(count_series)
+        
+        # Step 4: Add churn rates
+        churn_means = df.groupby('vehicle_maa')['churn'].mean()
+        van_analysis['churn_rate'] = van_analysis['vehicle_maa'].map(churn_means).round(4)
+        
+        # Step 5: Sort and display
+        high_churn = van_analysis.sort_values('churn_rate', ascending=False)
+        low_churn = van_analysis.sort_values('churn_rate', ascending=True)
+        
+        print("Churn Analysis:")
+        print("-" * 50)
+        print("\nTop 5 High Churn Vans:")
+        print(high_churn.head())
+        print("\nTop 5 Low Churn Vans:")
+        print(low_churn.head())
+        
+        return van_analysis
+        
+    except Exception as e:
+        print(f"Error: {str(e)}")
+        return None
 
 
 
