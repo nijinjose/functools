@@ -1,7 +1,7 @@
 import pandas as pd
 
 # Assume df1 and df2 are already defined
-# df1: Original DataFrame (600 columns)
+# df1: Original DataFrame
 # df2: Modified DataFrame
 
 # Step 1: Compare column differences
@@ -17,14 +17,29 @@ data_differences = {}
 difference_counts = {}
 
 for col in common_columns:
-    # Compare column values efficiently
-    if not df1[col].equals(df2[col]):
-        diff_mask = df1[col] != df2[col]
-        count_diff = diff_mask.sum()  # Count rows with differences
-        data_differences[col] = df1.loc[diff_mask, col].reset_index().join(
-            df2.loc[diff_mask, col].reset_index(), lsuffix='_df1', rsuffix='_df2'
-        )
-        difference_counts[col] = count_diff
+    if pd.api.types.is_categorical_dtype(df1[col]) and pd.api.types.is_categorical_dtype(df2[col]):
+        # Ensure categories are the same before comparing
+        if set(df1[col].cat.categories) != set(df2[col].cat.categories):
+            print(f"Column '{col}' has different categories and cannot be directly compared.")
+        else:
+            # Compare only values
+            diff_mask = df1[col] != df2[col]
+            count_diff = diff_mask.sum()
+            if count_diff > 0:
+                data_differences[col] = df1.loc[diff_mask, col].reset_index().join(
+                    df2.loc[diff_mask, col].reset_index(), lsuffix='_df1', rsuffix='_df2'
+                )
+                difference_counts[col] = count_diff
+    else:
+        # Handle non-categorical columns
+        if not df1[col].equals(df2[col]):
+            diff_mask = df1[col] != df2[col]
+            count_diff = diff_mask.sum()
+            if count_diff > 0:
+                data_differences[col] = df1.loc[diff_mask, col].reset_index().join(
+                    df2.loc[diff_mask, col].reset_index(), lsuffix='_df1', rsuffix='_df2'
+                )
+                difference_counts[col] = count_diff
 
 # Step 3: Report data differences summary
 if data_differences:
