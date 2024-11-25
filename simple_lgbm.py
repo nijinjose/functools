@@ -42,6 +42,26 @@ y = df['venda']
 X_processed = preprocessor.fit_transform(X)
 
 
+
+
+#OR
+#Feature-engine library for advanced feature engineering.
+from feature_engine.encoding import OneHotEncoder as fe_OneHotEncoder
+from feature_engine.imputation import MeanMedianImputer
+
+# Initialize encoders and imputers
+encoder = fe_OneHotEncoder(variables=categorical_cols)
+imputer = MeanMedianImputer(imputation_method='median', variables=numerical_cols)
+
+# Apply transformations
+X_encoded = encoder.fit_transform(X)
+X_imputed = imputer.fit_transform(X_encoded)
+
+
+
+
+
+
 # Split data into training and testing sets
 X_train, X_test, y_train, y_test = train_test_split(X_processed, y, test_size=0.2, random_state=42, stratify=y)
 
