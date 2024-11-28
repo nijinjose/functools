@@ -31,15 +31,21 @@ params = {
     'seed': 42                        # Random seed for reproducibility
 }
 
-# Train LightGBM model
+
+
+# Train LightGBM model with explicit num_boost_round
 print("Training model with one-hot encoded data and automatic imbalance handling...")
 model = lgb.train(
     params,
     train_data,
+    num_boost_round=1000,  # Specify the number of boosting rounds
     valid_sets=[train_data, test_data],
     early_stopping_rounds=50,
     verbose_eval=50
 )
+
+
+
 
 # Predict probabilities and evaluate
 y_pred_prob = model.predict(X_test)
