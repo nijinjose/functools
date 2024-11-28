@@ -66,13 +66,11 @@ for col in categorical_cols:
 
 
 
-
-
 # Identify numerical columns
 numerical_cols = df.select_dtypes(include=[np.number]).columns.tolist()
 
-# Initialize a DataFrame to store analysis results
-analysis_results = pd.DataFrame(columns=['Feature', 'Mean', 'Median', 'Std', 'Skewness', 'Kurtosis', 'Outliers'])
+# Initialize a list to store analysis results
+analysis_results_list = []
 
 for col in numerical_cols:
     mean = df[col].mean()
@@ -90,8 +88,8 @@ for col in numerical_cols:
     outliers = df[(df[col] < lower_bound) | (df[col] > upper_bound)]
     num_outliers = outliers.shape[0]
     
-    # Append results
-    analysis_results = analysis_results.append({
+    # Append results to the list
+    analysis_results_list.append({
         'Feature': col,
         'Mean': mean,
         'Median': median,
@@ -99,7 +97,7 @@ for col in numerical_cols:
         'Skewness': skewness,
         'Kurtosis': kurtosis,
         'Outliers': num_outliers
-    }, ignore_index=True)
+    })
     
     # Verbose output
     print(f"\nAnalysis of Numerical Feature: {col}")
@@ -130,9 +128,14 @@ for col in numerical_cols:
     
     plt.show()
 
+# After the loop, create a DataFrame from the list
+analysis_results = pd.DataFrame(analysis_results_list)
+
 # Display summary analysis
 print("\nSummary of Numerical Features:")
 print(analysis_results)
+
+
 
 
 
