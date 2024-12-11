@@ -1,17 +1,24 @@
 from IPython import get_ipython
-import json
 
-def extract_existing_outputs(save_to_file='existing_outputs.txt'):
-    # Access the kernel's in-memory representation of the notebook
+def extract_existing_outputs_to_file(save_to_file='existing_outputs.txt'):
+    """
+    Extract outputs from previously executed cells in a Jupyter Notebook
+    and save them to a file.
+    """
     ipython = get_ipython()
-    cells = ipython.history_manager.db  # Accessing history DB (in-memory representation)
+    outputs = []
     
-    extracted_outputs = []
+    # Access the Out dictionary to get all stored outputs
+    out_dict = ipython.user_ns.get('Out', {})
     
-    for session_id, line_number, code in ipython.history_manager.get_range():
-        try:
-            # Skip code, focusing only on outputs
-            cell_output = ipython.run_cell(code)._iresult
-            if isinstance(cells):
-                print("total_outputs")
+    with open(save_to_file, 'w', encoding='utf-8') as file:
+        for execution_count, output in out_dict.items():
+            if output is not None:
+                # Write each output to the file
+                file.write(f"Cell [{execution_count}]:\n")
+                file.write(str(output) + '\n\n')
+    
+    print(f"All outputs saved to {save_to_file}")
 
+# Execute the function to save outputs
+extract_existing_outputs_to_file()
