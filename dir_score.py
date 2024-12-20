@@ -37,6 +37,41 @@ for name, path in joblib_models.items():
     except Exception as e:
         print(f"Failed to load joblib model {name}: {e}")
 
+
+
+
+
+
+import pandas as pd
+
+# Assuming df_test is your test DataFrame
+df_test = pd.read_csv("test_data.csv")  # Replace with the actual path to your test data
+
+# Create a DataFrame to store predictions
+predictions = pd.DataFrame()
+predictions["index"] = df_test.index  # Add index column for reference
+
+# Score with LightGBM models
+for model_name, model in lgb_models.items():
+    print(f"Scoring with LightGBM model: {model_name}")
+    try:
+        predictions[model_name] = model.predict(df_test)  # Use predict for LightGBM
+    except Exception as e:
+        print(f"Failed to score with model {model_name}: {e}")
+
+# Score with joblib models
+for model_name, model in joblib_models.items():
+    print(f"Scoring with joblib model: {model_name}")
+    try:
+        predictions[model_name] = model.predict(df_test)  # Use predict for joblib models
+    except Exception as e:
+        print(f"Failed to score with model {model_name}: {e}")
+
+# Save predictions to a CSV file
+predictions.to_csv("model_predictions.csv", index=False)
+print("Predictions saved to 'model_predictions.csv'")
+
+
 # Display loaded models
 print("Loaded LightGBM models:", list(loaded_lgb_models.keys()))
 print("Loaded joblib models:", list(loaded_joblib_models.keys()))
