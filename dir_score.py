@@ -1,43 +1,42 @@
-import os
 import joblib
 import lightgbm as lgb
 
-# Define the base directory containing top-level folders
-base_path = "C:/Users/your_user/Documents/results"  # Update this to your results folder
+# Hard-coded paths for LightGBM models
+lgb_models = {
+    "a0": "C:/Users/your_user/Documents/results/a0/model_a0.lgb",
+    "b1": "C:/Users/your_user/Documents/results/b1/model_b1.lgb",
+    "b2": "C:/Users/your_user/Documents/results/b2/model_b2.lgb",
+    "c3": "C:/Users/your_user/Documents/results/c3/model_c3.lgb",
+}
 
-# Dictionaries to store models
-lgb_models = {}
-joblib_models = {}
+# Hard-coded paths for joblib models
+joblib_models = {
+    "a0": "C:/Users/your_user/Documents/results/a0/joblib/model_a0.joblib",
+    "b1": "C:/Users/your_user/Documents/results/b1/joblib/model_b1.joblib",
+    "b2": "C:/Users/your_user/Documents/results/b2/joblib/model_b2.joblib",
+    "c3": "C:/Users/your_user/Documents/results/c3/joblib/model_c3.joblib",
+}
 
-# Traverse each top-level folder (a0, b1, b2, c3)
-for folder in os.listdir(base_path):
-    folder_path = os.path.join(base_path, folder)
-    
-    if os.path.isdir(folder_path):
-        # Load the .lgb model from the main folder
-        for file in os.listdir(folder_path):
-            if file.endswith(".lgb"):
-                lgb_model_path = os.path.join(folder_path, file)
-                print(f"Loading LightGBM model from: {lgb_model_path}")
-                try:
-                    lgb_models[file] = lgb.Booster(model_file=lgb_model_path)
-                    print(f"Loaded LightGBM model: {file}")
-                except Exception as e:
-                    print(f"Failed to load LightGBM model {file}: {e}")
-        
-        # Load the .joblib models from the 'joblib' subfolder
-        joblib_folder_path = os.path.join(folder_path, "joblib")
-        if os.path.exists(joblib_folder_path) and os.path.isdir(joblib_folder_path):
-            for file in os.listdir(joblib_folder_path):
-                if file.endswith(".joblib"):
-                    joblib_model_path = os.path.join(joblib_folder_path, file)
-                    print(f"Loading joblib model from: {joblib_model_path}")
-                    try:
-                        joblib_models[file] = joblib.load(joblib_model_path)
-                        print(f"Loaded joblib model: {file}")
-                    except Exception as e:
-                        print(f"Failed to load joblib model {file}: {e}")
+# Load LightGBM models
+loaded_lgb_models = {}
+for name, path in lgb_models.items():
+    print(f"Loading LightGBM model: {name} from {path}")
+    try:
+        loaded_lgb_models[name] = lgb.Booster(model_file=path)
+        print(f"Successfully loaded {name}")
+    except Exception as e:
+        print(f"Failed to load LightGBM model {name}: {e}")
 
-# Display all loaded models
-print("Loaded LightGBM models:", list(lgb_models.keys()))
-print("Loaded joblib models:", list(joblib_models.keys()))
+# Load joblib models
+loaded_joblib_models = {}
+for name, path in joblib_models.items():
+    print(f"Loading joblib model: {name} from {path}")
+    try:
+        loaded_joblib_models[name] = joblib.load(path)
+        print(f"Successfully loaded {name}")
+    except Exception as e:
+        print(f"Failed to load joblib model {name}: {e}")
+
+# Display loaded models
+print("Loaded LightGBM models:", list(loaded_lgb_models.keys()))
+print("Loaded joblib models:", list(loaded_joblib_models.keys()))
