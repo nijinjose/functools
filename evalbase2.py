@@ -59,3 +59,109 @@ analysis_data = {
 joblib_path = os.path.join(output_dir, "analysis_data.joblib")
 joblib.dump(analysis_data, joblib_path)
 print(f"Analysis data saved as joblib file to {joblib_path}")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+import joblib
+import pandas as pd
+import numpy as np
+import os
+from sklearn.metrics import roc_auc_score, confusion_matrix
+
+# 1. Load the saved data
+output_dir = "analysis_outputs"
+analysis_data = joblib.load(os.path.join(output_dir, "analysis_data.joblib"))
+
+# Extract components
+X_train = analysis_data["X_train_full"]
+y_train = analysis_data["y_train_full"]
+train_predictions = analysis_data["train_predictions"]
+X_test = analysis_data["X_test"]
+y_test = analysis_data["y_test"]
+test_predictions = analysis_data["test_predictions"]
+model = analysis_data["final_model"]
+cv_scores = analysis_data["cv_auc_scores"]
+
+# 2. Load full datasets with predictions
+train_full = pd.read_csv(os.path.join(output_dir, "train_data_with_predictions.csv"))
+test_full = pd.read_csv(os.path.join(output_dir, "test_data_with_predictions.csv"))
+
+# 3. Basic Analysis
+print("\nModel Performance Metrics:")
+print(f"CV AUC Scores: {cv_scores}")
+print(f"Average CV AUC: {np.mean(cv_scores):.4f} (±{np.std(cv_scores):.4f})")
+print(f"Test AUC: {roc_auc_score(y_test, test_predictions):.4f}")
+
+# 4. Prediction Distribution Analysis
+print("\nPrediction Distributions:")
+print("\nTrain Predictions:")
+print(train_full['prediction'].describe())
+print("\nTest Predictions:")
+print(test_full['prediction'].describe())
+
+# 5. Prediction Range Analysis
+def analyze_predictions(predictions, name=""):
+    ranges = [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
+    dist = pd.cut(predictions, ranges).value_counts().sort_index()
+    print(f"\n{name} Predictions by Range (%):")
+    print((dist/len(predictions) * 100))
+
+analyze_predictions(train_full['prediction'], "Train")
+analyze_predictions(test_full['prediction'], "Test")
+
+# 6. Feature Importance (if using LightGBM)
+if hasattr(model, 'feature_importance'):
+    importance = pd.DataFrame({
+        'feature': X_train.columns,
+        'importance': model.feature_importance(),
+    }).sort_values('importance', ascending=False)
+    
+    print("\nTop 10 Most Important Features:")
+    print(importance.head(10))
+
+# 7. Confusion Matrix Analysis (using 0.5 threshold)
+def print_confusion_stats(y_true, y_pred, name=""):
+    y_pred_binary = (y_pred > 0.5).astype(int)
+    cm = confusion_matrix(y_true, y_pred_binary)
+    tn, fp, fn, tp = cm.ravel()
+    
+    print(f"\n{name} Confusion Matrix Stats:")
+    print(f"True Negatives: {tn}")
+    print(f"False Positives: {fp}")
+    print(f"False Negatives: {fn}")
+    print(f"True Positives: {tp}")
+    print(f"Precision: {tp/(tp+fp):.4f}")
+    print(f"Recall: {tp/(tp+fn):.4f}")
+
+print_confusion_stats(y_test, test_predictions, "Test Set")
+
+# 8. Prediction vs Actual Analysis
+def analyze_accuracy_by_range(y_true, predictions, name=""):
+    df = pd.DataFrame({
+        'actual': y_true,
+        'predicted': predictions
+    })
+    
+    ranges = [0, 0.2, 0.4, 0.6, 0.8, 1.0]
+    df['pred_range'] = pd.cut(df['predicted'], ranges)
+    
+    analysis = df.groupby('pred_range').agg({
+        'actual': ['count', 'mean'],
+        'predicted': 'mean'
+    })
+    
+    print(f"\n{name} Accuracy by Prediction Range:")
+    print(analysis)
+
+analyze_accuracy_by_range(y_test, test_predictions, "Test Set")
