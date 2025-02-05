@@ -165,3 +165,73 @@ def analyze_accuracy_by_range(y_true, predictions, name=""):
     print(analysis)
 
 analyze_accuracy_by_range(y_test, test_predictions, "Test Set")
+
+
+
+
+
+
+
+
+import os
+import matplotlib.pyplot as plt
+import seaborn as sns
+import numpy as np
+import pandas as pd
+from sklearn.metrics import roc_curve, auc
+
+# Ensure the output directory exists
+output_dir = "analysis_outputs"
+os.makedirs(output_dir, exist_ok=True)
+
+# -----------------------------
+# ROC Curves for Train and Test
+# -----------------------------
+# Compute ROC curve and AUC for the training set
+fpr_train, tpr_train, thresholds_train = roc_curve(y_train, train_predictions)
+roc_auc_train = auc(fpr_train, tpr_train)
+
+# Compute ROC curve and AUC for the test set
+fpr_test, tpr_test, thresholds_test = roc_curve(y_test, test_predictions)
+roc_auc_test = auc(fpr_test, tpr_test)
+
+# Plot ROC curves for both sets in one figure
+plt.figure(figsize=(10, 8))
+plt.plot(fpr_train, tpr_train, label=f"Train ROC (AUC = {roc_auc_train:.2f})", color="blue")
+plt.plot(fpr_test, tpr_test, label=f"Test ROC (AUC = {roc_auc_test:.2f})", color="red")
+plt.plot([0, 1], [0, 1], linestyle="--", color="gray", label="Random Guess")
+plt.xlim([0.0, 1.0])
+plt.ylim([0.0, 1.05])
+plt.xlabel("False Positive Rate")
+plt.ylabel("True Positive Rate")
+plt.title("ROC Curves for Train and Test Sets")
+plt.legend(loc="lower right")
+roc_curve_path = os.path.join(output_dir, "roc_curves.png")
+plt.savefig(roc_curve_path)
+plt.show()
+
+print(f"Train AUC: {roc_auc_train:.4f}")
+print(f"Test AUC: {roc_auc_test:.4f}")
+
+# ----------------------------------------------------
+# Distribution of Predictions and Average Prediction Values
+# ----------------------------------------------------
+# Print descriptive statistics for both sets
+print("\nTrain Prediction Summary:")
+print(train_full['prediction'].describe())
+
+print("\nTest Prediction Summary:")
+print(test_full['prediction'].describe())
+
+# Plot prediction distributions for both train and test sets on the same plot
+plt.figure(figsize=(10, 8))
+sns.histplot(train_full['prediction'], bins=20, kde=True, color="blue", label="Train Predictions", alpha=0.6)
+sns.histplot(test_full['prediction'], bins=20, kde=True, color="red", label="Test Predictions", alpha=0.6)
+plt.xlabel("Prediction Value")
+plt.ylabel("Frequency")
+plt.title("Distribution of Predictions for Train and Test Sets")
+plt.legend()
+dist_plot_path = os.path.join(output_dir, "predictions_distribution.png")
+plt.savefig(dist_plot_path)
+plt.show()
+
